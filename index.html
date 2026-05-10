@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>✈️ 家庭旅遊規劃</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#f8f6f1;--card:#fff;--pri:#1e6b55;--priL:#e8f5f0;--acc:#f0a830;--txt:#2d2d2d;--sub:#6b7280;--bdr:#e5e2db;--danger:#dc2626;--r:14px;--sh:0 2px 12px rgba(0,0,0,.06)}
+body{font-family:'Noto Sans TC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--txt);max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+header{background:linear-gradient(135deg,var(--pri),#2a8f73);padding:16px 20px;position:sticky;top:0;z-index:100}
+.header-inner{display:flex;align-items:center;justify-content:space-between}
+.logo{color:#fff;font-size:20px;font-weight:700;letter-spacing:1px}
+.trip-badge{background:rgba(255,255,255,.2);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px}
+main{flex:1;padding:16px 16px 90px}
+/* Tab Bar */
+.tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;background:#fff;border-top:1px solid var(--bdr);padding:6px 0 env(safe-area-inset-bottom,8px);z-index:100}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;border:none;background:none;padding:6px 0;cursor:pointer;font-family:inherit}
+.tab-btn .icon{font-size:20px}
+.tab-btn .label{font-size:11px;color:var(--sub)}
+.tab-btn.active .label{color:var(--pri);font-weight:700}
+/* 共用 */
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.section-title{font-size:20px;font-weight:700}
+.add-btn{background:var(--pri);color:#fff;border:none;border-radius:24px;padding:8px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.form-card{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--sh);margin-bottom:16px;border:1px solid var(--bdr)}
+.form-title{font-size:17px;font-weight:700;margin-bottom:16px}
+.form-grid{display:flex;flex-wrap:wrap;gap:12px}
+.field-half{flex:1 1 calc(50% - 6px);min-width:140px}
+.field-full{flex:1 1 100%}
+.field-label{display:block;font-size:13px;font-weight:600;color:var(--sub);margin-bottom:4px}
+input[type="text"],input[type="number"],input[type="date"],input[type="time"],select,textarea{width:100%;padding:10px 12px;border:1px solid var(--bdr);border-radius:10px;font-size:15px;outline:none;background:#fafaf8;font-family:inherit;box-sizing:border-box}
+.form-actions{display:flex;gap:10px;margin-top:16px}
+.save-btn{background:var(--pri);color:#fff;border:none;border-radius:10px;padding:10px 24px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+.cancel-btn{background:none;color:var(--sub);border:1px solid var(--bdr);border-radius:10px;padding:10px 20px;font-size:15px;cursor:pointer;font-family:inherit}
+.btn-outline{background:none;color:var(--pri);border:1px solid var(--pri);border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;font-weight:600;font-family:inherit}
+.btn-edit{background:none;color:var(--sub);border:1px solid var(--bdr);border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;font-family:inherit}
+.btn-del{background:none;color:var(--danger);border:1px solid rgba(220,38,38,.2);border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;font-family:inherit}
+.btn-sm{background:none;border:none;cursor:pointer;font-size:16px;padding:4px}
+.btn-outline-sm{background:none;border:1px solid var(--bdr);border-radius:8px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--sub);font-family:inherit}
+.empty{text-align:center;padding:48px 20px}
+.empty-icon{font-size:48px;margin-bottom:12px}
+.empty-text{color:var(--sub);font-size:15px}
+.hidden{display:none!important}
+/* Trips */
+.currency-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.currency-label{font-size:14px;font-weight:600}
+.link-sm{font-size:13px;color:var(--pri);text-decoration:none}
+.quick-links{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:16px;border:1px solid var(--bdr)}
+.quick-links-title{font-size:14px;font-weight:600;display:block;margin-bottom:8px}
+.link-group{display:flex;flex-wrap:wrap;gap:8px}
+.quick-link{background:var(--priL);color:var(--pri);text-decoration:none;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600}
+.trip-list{display:flex;flex-direction:column;gap:12px}
+.trip-card{background:var(--card);border-radius:var(--r);padding:16px;box-shadow:var(--sh);border:1px solid var(--bdr)}
+.trip-card.active{border:2px solid var(--pri);background:var(--priL)}
+.trip-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.trip-name{font-size:17px;font-weight:700}
+.trip-dest{font-size:14px;color:var(--sub);margin-top:2px}
+.active-badge{background:var(--pri);color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}
+.trip-date,.trip-info{font-size:14px;margin:3px 0}
+.trip-notes{font-size:13px;color:var(--sub);margin:6px 0;font-style:italic}
+.hotel-link{color:var(--pri);font-size:13px;text-decoration:none}
+.trip-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+/* Prep */
+.progress-wrap{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.progress-bar{flex:1;height:10px;background:#e5e5e5;border-radius:5px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--pri),#34d399);border-radius:5px;transition:width .3s}
+.progress-text{font-size:13px;font-weight:600;color:var(--pri);white-space:nowrap}
+.alert-box{background:#fef9e7;border:1px solid #f0d060;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:14px;color:#92700c}
+.sub-title{font-size:15px;font-weight:700;margin-bottom:10px}
+.passport-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.passport-card{background:var(--priL);border-radius:10px;padding:8px 14px;display:flex;flex-direction:column;gap:2px;min-width:120px}
+.passport-name{font-weight:700;font-size:14px}
+.passport-no,.passport-exp{font-size:12px;color:var(--sub)}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.filter-btn{background:none;border:1px solid var(--bdr);border-radius:20px;padding:5px 14px;font-size:13px;cursor:pointer;color:var(--sub);font-family:inherit}
+.filter-btn.active{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:600}
+.check-item{display:flex;justify-content:space-between;align-items:center;padding:10px 8px;border-bottom:1px solid rgba(229,226,219,.12)}
+.check-label{display:flex;align-items:center;gap:10px;cursor:pointer;flex:1}
+.check-label input{width:20px;height:20px;accent-color:var(--pri)}
+.checked{text-decoration:line-through;color:var(--sub)}
+.check-meta{display:flex;align-items:center;gap:8px}
+.cat-tag{font-size:11px;background:#f3f0eb;border-radius:6px;padding:2px 8px;color:var(--sub)}
+.btn-x{background:none;border:none;color:#ccc;cursor:pointer;font-size:16px}
+.add-item-row{display:flex;gap:8px;margin-top:14px;align-items:center}
+.add-item-row input{flex:1;padding:10px 12px;border:1px solid var(--bdr);border-radius:10px;font-size:14px;outline:none}
+.add-item-row select{padding:8px;border:1px solid var(--bdr);border-radius:8px;font-size:13px}
+.add-btn-sm{background:var(--pri);color:#fff;border:none;border-radius:10px;width:40px;height:40px;font-size:20px;cursor:pointer;font-weight:700}
+/* OnTrip */
+.day-section{margin-bottom:20px}
+.day-title{font-size:17px;font-weight:700;padding:8px 0;border-bottom:2px solid var(--pri);margin-bottom:10px}
+.it-card{background:var(--card);border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:var(--sh);border:1px solid var(--bdr)}
+.it-header{display:flex;align-items:center;gap:10px}
+.it-icon{font-size:24px}
+.it-info{flex:1;display:flex;flex-direction:column}
+.it-time{font-size:13px;color:var(--pri);font-weight:700}
+.it-title{font-size:16px;font-weight:600}
+.type-tag{font-size:11px;background:var(--priL);color:var(--pri);padding:3px 10px;border-radius:10px;font-weight:600}
+.it-addr,.it-notes{font-size:13px;color:var(--sub);margin:4px 0}
+.it-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.map-btn{background:#e0f2fe;color:#0369a1;border:none;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;font-weight:600;font-family:inherit}
+.nav-btn{background:#fef3c7;color:#92400e;border:none;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;font-weight:600;font-family:inherit}
+/* Expense */
+.summary-card{background:linear-gradient(135deg,var(--pri),#2a8f73);border-radius:var(--r);padding:20px;margin-bottom:16px;color:#fff}
+.total-row{display:flex;justify-content:space-between;align-items:center}
+.total-label{font-size:15px;opacity:.85}
+.total-amount{font-size:28px;font-weight:800}
+.cat-breakdown{margin-top:12px;display:flex;flex-direction:column;gap:4px}
+.cat-row{display:flex;justify-content:space-between;font-size:14px;opacity:.85}
+.split-card{background:var(--card);border-radius:var(--r);padding:16px;margin-bottom:16px;border:1px solid var(--bdr)}
+.split-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px solid rgba(229,226,219,.12);flex-wrap:wrap;gap:6px}
+.split-name{font-weight:700;min-width:60px}
+.split-check-group{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.split-check-label{display:flex;align-items:center;gap:4px;font-size:14px;cursor:pointer}
+.expense-list{display:flex;flex-direction:column;gap:6px}
+.expense-item{display:flex;justify-content:space-between;align-items:center;background:var(--card);border-radius:10px;padding:10px 14px;border:1px solid var(--bdr)}
+.expense-left{display:flex;flex-direction:column;gap:2px}
+.expense-cat{font-size:11px;color:var(--pri);font-weight:600}
+.expense-title{font-size:15px;font-weight:600}
+.expense-date,.expense-payer{font-size:12px;color:var(--sub)}
+.expense-right{display:flex;align-items:center;gap:10px}
+.expense-amount{font-size:17px;font-weight:700;color:var(--pri)}
+/* Receipt */
+.receipt-row{margin-bottom:14px}
+.receipt-label{display:block;width:100%;background:linear-gradient(135deg,var(--acc),#e09520);color:#fff;border-radius:12px;padding:14px 20px;font-size:16px;font-weight:700;cursor:pointer;text-align:center;box-shadow:0 2px 8px rgba(240,168,48,.3)}
+.receipt-label input[type="file"]{display:block;width:100%;margin-top:8px;font-size:14px;color:#fff}
+.scan-card{background:var(--card);border-radius:var(--r);padding:16px;box-shadow:var(--sh);margin-bottom:16px;border:2px solid var(--acc)}
+.scan-preview{border-radius:10px;overflow:hidden;margin-bottom:12px;max-height:200px;display:flex;justify-content:center;background:#f5f5f5}
+.scan-preview img{max-width:100%;max-height:200px;object-fit:contain}
+.scan-loading{display:flex;align-items:center;gap:10px;padding:16px 0;justify-content:center;font-size:14px;color:var(--sub)}
+.scan-error{background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;color:var(--danger);margin-bottom:10px}
+.scan-hint{font-size:13px;color:var(--sub);margin-bottom:10px}
+.scan-item{background:#fafaf8;border-radius:10px;padding:10px;margin-bottom:8px;border:1px solid var(--bdr)}
+.scan-item-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.scan-item-row input,.scan-item-row select{font-size:13px;padding:8px}
+.scan-date{font-size:12px;color:var(--sub);margin-top:4px;display:block}
+.scan-actions{display:flex;gap:10px;margin-top:12px}
+/* Members */
+.member-list{display:flex;flex-direction:column;gap:10px}
+.member-card{display:flex;gap:14px;align-items:flex-start;background:var(--card);border-radius:var(--r);padding:16px;box-shadow:var(--sh);border:1px solid var(--bdr)}
+.member-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--pri),var(--acc));color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0}
+.member-info{flex:1;display:flex;flex-direction:column;gap:3px}
+.member-name{font-size:17px;font-weight:700}
+.member-detail{font-size:13px;color:var(--sub)}
+.member-actions{display:flex;gap:4px;flex-shrink:0}
+/* Loading */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh}
+.loading-icon{font-size:48px;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ===== 資料 =====
+const LS = key => `travel-planner:${key}`;
+const load = key => { try { return JSON.parse(localStorage.getItem(LS(key))); } catch { return null; } };
+const save = (key, val) => { try { localStorage.setItem(LS(key), JSON.stringify(val)); } catch(e) { console.error(e); } };
+const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+
+const CURRENCIES = [
+  {code:"JPY",name:"日幣",symbol:"¥"},{code:"KRW",name:"韓元",symbol:"₩"},{code:"USD",name:"美金",symbol:"$"},
+  {code:"EUR",name:"歐元",symbol:"€"},{code:"THB",name:"泰銖",symbol:"฿"},{code:"VND",name:"越南盾",symbol:"₫"},
+  {code:"SGD",name:"新幣",symbol:"S$"},{code:"MYR",name:"馬幣",symbol:"RM"},{code:"TWD",name:"台幣",symbol:"NT$"}
+];
+const EXPENSE_CATS = ["餐飲","交通","住宿","門票","購物","其他"];
+const TYPE_ICONS = {"景點":"📍","餐廳":"🍽️","交通":"🚃","住宿":"🏨","購物":"🛍️","其他":"📌"};
+const DEFAULT_CHECKLIST = [
+  {id:"p1",text:"護照（效期6個月以上）",checked:false,category:"證件"},
+  {id:"p2",text:"身分證 / 駕照",checked:false,category:"證件"},
+  {id:"p3",text:"簽證（如需要）",checked:false,category:"證件"},
+  {id:"p4",text:"機票（電子機票截圖）",checked:false,category:"證件"},
+  {id:"p5",text:"訂房確認單",checked:false,category:"證件"},
+  {id:"p6",text:"旅遊平安險",checked:false,category:"證件"},
+  {id:"d1",text:"感冒藥",checked:false,category:"藥物"},
+  {id:"d2",text:"腸胃藥",checked:false,category:"藥物"},
+  {id:"d3",text:"暈車藥",checked:false,category:"藥物"},
+  {id:"d4",text:"OK繃 / 消毒藥水",checked:false,category:"藥物"},
+  {id:"d5",text:"個人處方藥",checked:false,category:"藥物"},
+  {id:"i1",text:"手機充電器 / 行動電源",checked:false,category:"3C"},
+  {id:"i2",text:"轉接頭（萬國插座）",checked:false,category:"3C"},
+  {id:"i3",text:"WiFi機 / SIM卡",checked:false,category:"3C"},
+  {id:"i4",text:"相機",checked:false,category:"3C"},
+  {id:"c1",text:"換匯（當地貨幣）",checked:false,category:"財務"},
+  {id:"c2",text:"信用卡（海外回饋）",checked:false,category:"財務"},
+  {id:"c3",text:"緊急備用現金",checked:false,category:"財務"},
+  {id:"t1",text:"盥洗用品",checked:false,category:"日用品"},
+  {id:"t2",text:"防曬乳 / 帽子",checked:false,category:"日用品"},
+  {id:"t3",text:"雨具",checked:false,category:"日用品"},
+  {id:"t4",text:"換洗衣物",checked:false,category:"日用品"},
+  {id:"t5",text:"拖鞋",checked:false,category:"日用品"},
+];
+
+// ===== 狀態 =====
+let state = {
+  tab: "trips",
+  trips: load("trips") || [],
+  activeTripId: load("activeTripId") || null,
+  members: load("members") || [],
+  checklist: load("checklist") || DEFAULT_CHECKLIST,
+  expenses: load("expenses") || [],
+  itinerary: load("itinerary") || [],
+  currency: load("currency") || "JPY",
+  prepFilter: "all",
+  // scan state
+  scanning: false,
+  scanPreview: null,
+  scanError: "",
+  scanItems: [],
+};
+
+function saveAll() {
+  save("trips", state.trips);
+  save("activeTripId", state.activeTripId);
+  save("members", state.members);
+  save("checklist", state.checklist);
+  save("expenses", state.expenses);
+  save("itinerary", state.itinerary);
+  save("currency", state.currency);
+}
+
+function setState(patch) {
+  Object.assign(state, patch);
+  saveAll();
+  render();
+}
+
+function getCur() { return CURRENCIES.find(c => c.code === state.currency) || CURRENCIES[0]; }
+function getActiveTrip() { return state.trips.find(t => t.id === state.activeTripId); }
+
+// ===== 轉譯函數 =====
+function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+
+function render() {
+  const app = document.getElementById('app');
+  const trip = getActiveTrip();
+  app.innerHTML = `
+    <header>
+      <div class="header-inner">
+        <span class="logo">✈️ 家庭旅遊規劃</span>
+        ${trip ? `<span class="trip-badge">${esc(trip.name)}</span>` : ''}
+      </div>
+    </header>
+    <main>${renderTab()}</main>
+    <nav class="tab-bar">
+      ${[{id:"trips",label:"旅程",icon:"✈️"},{id:"prep",label:"行前準備",icon:"📋"},{id:"ontrip",label:"行程中",icon:"🗺️"},{id:"expense",label:"消費紀錄",icon:"💰"},{id:"members",label:"親友團",icon:"👥"}]
+        .map(t => `<button class="tab-btn ${state.tab===t.id?'active':''}" onclick="setState({tab:'${t.id}'})"><span class="icon">${t.icon}</span><span class="label">${t.label}</span></button>`).join('')}
+    </nav>
+  `;
+  bindEvents();
+}
+
+function renderTab() {
+  switch(state.tab) {
+    case 'trips': return renderTrips();
+    case 'prep': return renderPrep();
+    case 'ontrip': return renderOnTrip();
+    case 'expense': return renderExpense();
+    case 'members': return renderMembers();
+  }
+}
+
+// ===== 旅程 =====
+function renderTrips() {
+  const cur = getCur();
+  let html = `
+    <div class="section-header">
+      <h2 class="section-title">🗓️ 旅程管理</h2>
+      <button class="add-btn" onclick="showTripForm()">＋ 新增旅程</button>
+    </div>
+    <div class="currency-row">
+      <span class="currency-label">旅遊幣別：</span>
+      <select onchange="setState({currency:this.value})">${CURRENCIES.map(c=>`<option value="${c.code}" ${state.currency===c.code?'selected':''}>${c.name} (${c.symbol})</option>`).join('')}</select>
+      <a href="https://www.google.com/finance/quote/TWD-${state.currency}" target="_blank" class="link-sm">查匯率 ↗</a>
+    </div>
+    <div class="quick-links">
+      <span class="quick-links-title">🔍 訂票找住宿：</span>
+      <div class="link-group">
+        <a href="https://www.google.com/travel/flights" target="_blank" class="quick-link">Google 機票</a>
+        <a href="https://www.skyscanner.com.tw/" target="_blank" class="quick-link">Skyscanner</a>
+        <a href="https://www.booking.com" target="_blank" class="quick-link">Booking.com</a>
+        <a href="https://www.agoda.com" target="_blank" class="quick-link">Agoda</a>
+        <a href="https://www.klook.com" target="_blank" class="quick-link">Klook</a>
+      </div>
+    </div>
+    <div id="tripFormArea"></div>`;
+  if (state.trips.length === 0) {
+    html += `<div class="empty"><div class="empty-icon">🌏</div><p class="empty-text">還沒有旅程，點上方「新增旅程」開始規劃！</p></div>`;
+  } else {
+    html += `<div class="trip-list">${state.trips.map(t => {
+      const isActive = t.id === state.activeTripId;
+      return `<div class="trip-card ${isActive?'active':''}">
+        <div class="trip-card-header"><div><div class="trip-name">${esc(t.name)}</div><div class="trip-dest">${esc(t.destination||'未設定目的地')}</div></div>
+        ${isActive?'<span class="active-badge">目前旅程</span>':''}</div>
+        ${t.startDate||t.endDate?`<p class="trip-date">📅 ${esc(t.startDate||'?')} ～ ${esc(t.endDate||'?')}</p>`:''}
+        ${t.flight?`<p class="trip-info">✈️ 去程：${esc(t.flight)}</p>`:''}
+        ${t.flightReturn?`<p class="trip-info">✈️ 回程：${esc(t.flightReturn)}</p>`:''}
+        ${t.hotel?`<p class="trip-info">🏨 ${esc(t.hotel)}${t.hotelLink?` <a href="${esc(t.hotelLink)}" target="_blank" class="hotel-link">查看 ↗</a>`:''}</p>`:''}
+        ${t.trainInfo?`<p class="trip-info">🚃 ${esc(t.trainInfo)}</p>`:''}
+        ${t.notes?`<p class="trip-notes">📝 ${esc(t.notes)}</p>`:''}
+        <div class="trip-actions">
+          <button class="${isActive?'btn-outline-sm':'btn-outline'}" onclick="${isActive?'':'setState({activeTripId:\''+t.id+'\'})'}" ${isActive?'disabled':''}>${isActive?'✓ 已選擇':'選為目前旅程'}</button>
+          <button class="btn-edit" onclick="editTrip('${t.id}')">編輯</button>
+          <button class="btn-del" onclick="deleteTrip('${t.id}')">刪除</button>
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+  }
+  return html;
+}
+
+function tripFormHTML(data={}, editId='') {
+  const d = {name:'',destination:'',startDate:'',endDate:'',flight:'',flightReturn:'',hotel:'',hotelLink:'',trainInfo:'',notes:'',...data};
+  return `<div class="form-card"><h3 class="form-title">${editId?'✏️ 編輯旅程':'✈️ 新增旅程'}</h3>
+    <div class="form-grid">
+      <div class="field-half"><label class="field-label">旅程名稱 *</label><input type="text" id="tf_name" value="${esc(d.name)}" placeholder="例：2026 東京家族旅行"></div>
+      <div class="field-half"><label class="field-label">目的地</label><input type="text" id="tf_dest" value="${esc(d.destination)}" placeholder="例：日本東京"></div>
+      <div class="field-half"><label class="field-label">出發日期</label><input type="date" id="tf_start" value="${d.startDate}"></div>
+      <div class="field-half"><label class="field-label">回程日期</label><input type="date" id="tf_end" value="${d.endDate}"></div>
+      <div class="field-half"><label class="field-label">去程航班</label><input type="text" id="tf_flight" value="${esc(d.flight)}" placeholder="例：CI-100 08:30"></div>
+      <div class="field-half"><label class="field-label">回程航班</label><input type="text" id="tf_flightR" value="${esc(d.flightReturn)}" placeholder="例：CI-101 18:00"></div>
+      <div class="field-half"><label class="field-label">住宿名稱</label><input type="text" id="tf_hotel" value="${esc(d.hotel)}" placeholder="例：新宿京王飯店"></div>
+      <div class="field-half"><label class="field-label">住宿連結</label><input type="text" id="tf_hotelLink" value="${esc(d.hotelLink)}" placeholder="https://..."></div>
+      <div class="field-full"><label class="field-label">車票/交通</label><input type="text" id="tf_train" value="${esc(d.trainInfo)}" placeholder="例：JR Pass 7日券"></div>
+      <div class="field-full"><label class="field-label">備註</label><input type="text" id="tf_notes" value="${esc(d.notes)}" placeholder="其他注意事項..."></div>
+    </div>
+    <div class="form-actions"><button class="save-btn" onclick="saveTrip('${editId}')">💾 儲存</button><button class="cancel-btn" onclick="render()">取消</button></div></div>`;
+}
+function showTripForm() { document.getElementById('tripFormArea').innerHTML = tripFormHTML(); }
+function editTrip(id) { const t = state.trips.find(x=>x.id===id); if(t) document.getElementById('tripFormArea').innerHTML = tripFormHTML(t, id); }
+function saveTrip(editId) {
+  const d = {name:document.getElementById('tf_name').value,destination:document.getElementById('tf_dest').value,startDate:document.getElementById('tf_start').value,endDate:document.getElementById('tf_end').value,flight:document.getElementById('tf_flight').value,flightReturn:document.getElementById('tf_flightR').value,hotel:document.getElementById('tf_hotel').value,hotelLink:document.getElementById('tf_hotelLink').value,trainInfo:document.getElementById('tf_train').value,notes:document.getElementById('tf_notes').value};
+  if(!d.name.trim()) return alert('請輸入旅程名稱');
+  if(editId) { state.trips = state.trips.map(t=>t.id===editId?{...t,...d}:t); }
+  else { const n = {id:uid(),...d}; state.trips.push(n); state.activeTripId = n.id; }
+  saveAll(); render();
+}
+function deleteTrip(id) { if(!confirm('確定刪除此旅程？')) return; state.trips = state.trips.filter(t=>t.id!==id); if(state.activeTripId===id) state.activeTripId = state.trips[0]?.id||null; saveAll(); render(); }
+
+// ===== 行前準備 =====
+function renderPrep() {
+  const cl = state.checklist;
+  const cats = [...new Set(cl.map(c=>c.category))];
+  const filtered = state.prepFilter==='all' ? cl : cl.filter(c=>c.category===state.prepFilter);
+  const done = cl.filter(c=>c.checked).length;
+  const pct = cl.length ? Math.round(done/cl.length*100) : 0;
+  let html = `
+    <div class="section-header"><h2 class="section-title">📋 行前準備</h2><button class="btn-outline-sm" onclick="resetChecklist()">全部重設</button></div>
+    <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div><span class="progress-text">${done}/${cl.length} (${pct}%)</span></div>
+    <div class="alert-box">⚠️ 護照效期提醒：出國前請確認護照有效期限至少6個月以上！</div>`;
+  if(state.members.length > 0) {
+    html += `<h3 class="sub-title">🛂 團員護照資訊</h3><div class="passport-grid">${state.members.map(m=>`<div class="passport-card"><span class="passport-name">${esc(m.name)}</span><span class="passport-no">${esc(m.passport||'未填寫')}</span>${m.passportExp?`<span class="passport-exp">效期：${esc(m.passportExp)}</span>`:''}</div>`).join('')}</div>`;
+  }
+  html += `<div class="filter-row"><button class="filter-btn ${state.prepFilter==='all'?'active':''}" onclick="setState({prepFilter:'all'})">全部</button>${cats.map(c=>`<button class="filter-btn ${state.prepFilter===c?'active':''}" onclick="setState({prepFilter:'${c}'})">${c}</button>`).join('')}</div>`;
+  html += filtered.map(item => `<div class="check-item"><label class="check-label"><input type="checkbox" ${item.checked?'checked':''} onchange="toggleCheck('${item.id}')"><span class="${item.checked?'checked':''}">${esc(item.text)}</span></label><div class="check-meta"><span class="cat-tag">${item.category}</span><button class="btn-x" onclick="removeCheck('${item.id}')">✕</button></div></div>`).join('');
+  html += `<div class="add-item-row"><input type="text" id="newCheckItem" placeholder="新增項目..." onkeydown="if(event.key==='Enter')addCheckItem()"><select id="newCheckCat">${['證件','藥物','3C','財務','日用品','其他'].map(c=>`<option>${c}</option>`).join('')}</select><button class="add-btn-sm" onclick="addCheckItem()">＋</button></div>`;
+  return html;
+}
+function toggleCheck(id) { state.checklist = state.checklist.map(c=>c.id===id?{...c,checked:!c.checked}:c); saveAll(); render(); }
+function removeCheck(id) { state.checklist = state.checklist.filter(c=>c.id!==id); saveAll(); render(); }
+function addCheckItem() { const inp = document.getElementById('newCheckItem'); const cat = document.getElementById('newCheckCat').value; if(!inp.value.trim()) return; state.checklist.push({id:uid(),text:inp.value.trim(),checked:false,category:cat}); saveAll(); render(); }
+function resetChecklist() { state.checklist = state.checklist.map(c=>({...c,checked:false})); saveAll(); render(); }
+
+// ===== 行程中 =====
+function renderOnTrip() {
+  const trip = getActiveTrip();
+  let html = `<div class="section-header"><h2 class="section-title">🗺️ 行程中</h2><button class="add-btn" onclick="showItForm()">＋ 新增行程點</button></div><div id="itFormArea"></div>`;
+  if(state.itinerary.length === 0) {
+    html += `<div class="empty"><div class="empty-icon">🗺️</div><p class="empty-text">還沒有行程，快來新增景點和餐廳！</p></div>`;
+  } else {
+    const days = [...new Set(state.itinerary.map(i=>i.day))].sort((a,b)=>a-b);
+    days.forEach(day => {
+      const items = state.itinerary.filter(i=>i.day===day).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+      html += `<div class="day-section"><h3 class="day-title">📅 第 ${day} 天</h3>`;
+      items.forEach((item,idx) => {
+        const q = encodeURIComponent(item.address||item.title);
+        html += `<div class="it-card"><div class="it-header"><span class="it-icon">${TYPE_ICONS[item.type]||'📌'}</span><div class="it-info"><span class="it-time">${esc(item.time||'--:--')}</span><span class="it-title">${esc(item.title)}</span></div><span class="type-tag">${item.type}</span></div>
+        ${item.address?`<p class="it-addr">📍 ${esc(item.address)}</p>`:''}
+        ${item.notes?`<p class="it-notes">📝 ${esc(item.notes)}</p>`:''}
+        <div class="it-actions"><a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" class="map-btn">🗺️ 地圖</a>
+        ${idx>0?`<a href="https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(items[idx-1].address||items[idx-1].title)}&destination=${encodeURIComponent(item.address||item.title)}&travelmode=transit" target="_blank" class="nav-btn">🚶 前往路線</a>`:''}
+        <button class="btn-sm" onclick="editIt('${item.id}')">✏️</button><button class="btn-sm" onclick="deleteIt('${item.id}')">🗑️</button></div></div>`;
+      });
+      html += `</div>`;
+    });
+  }
+  if(trip?.destination) {
+    html += `<div class="quick-links"><span class="quick-links-title">🍽️ 找餐廳：</span><div class="link-group"><a href="https://www.google.com/maps/search/餐廳+${encodeURIComponent(trip.destination)}" target="_blank" class="quick-link">Google Maps</a><a href="https://tabelog.com" target="_blank" class="quick-link">食べログ</a><a href="https://www.tripadvisor.com" target="_blank" class="quick-link">TripAdvisor</a></div></div>`;
+  }
+  return html;
+}
+function itFormHTML(data={},editId='') {
+  const d = {day:1,time:'',title:'',type:'景點',address:'',notes:'',...data};
+  return `<div class="form-card"><h3 class="form-title">${editId?'✏️ 編輯':'📍 新增行程點'}</h3>
+    <div class="form-grid">
+      <div class="field-half"><label class="field-label">第幾天</label><input type="number" id="it_day" min="1" value="${d.day}"></div>
+      <div class="field-half"><label class="field-label">時間</label><input type="time" id="it_time" value="${d.time}"></div>
+      <div class="field-half"><label class="field-label">類型</label><select id="it_type">${Object.keys(TYPE_ICONS).map(t=>`<option ${d.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="field-half"><label class="field-label">名稱 *</label><input type="text" id="it_title" value="${esc(d.title)}" placeholder="例：淺草雷門"></div>
+      <div class="field-full"><label class="field-label">地址 / 地點</label><input type="text" id="it_addr" value="${esc(d.address)}" placeholder="地址或地標名稱（用於地圖導航）"></div>
+      <div class="field-full"><label class="field-label">備註</label><input type="text" id="it_notes" value="${esc(d.notes)}" placeholder="營業時間、門票、注意事項..."></div>
+    </div>
+    <div class="form-actions"><button class="save-btn" onclick="saveIt('${editId}')">💾 儲存</button><button class="cancel-btn" onclick="render()">取消</button></div></div>`;
+}
+function showItForm() { document.getElementById('itFormArea').innerHTML = itFormHTML(); }
+function editIt(id) { const item = state.itinerary.find(i=>i.id===id); if(item) document.getElementById('itFormArea').innerHTML = itFormHTML(item, id); }
+function saveIt(editId) {
+  const d = {day:parseInt(document.getElementById('it_day').value)||1,time:document.getElementById('it_time').value,title:document.getElementById('it_title').value,type:document.getElementById('it_type').value,address:document.getElementById('it_addr').value,notes:document.getElementById('it_notes').value};
+  if(!d.title.trim()) return alert('請輸入名稱');
+  if(editId) { state.itinerary = state.itinerary.map(i=>i.id===editId?{...i,...d}:i); }
+  else { state.itinerary.push({id:uid(),...d}); }
+  saveAll(); render();
+}
+function deleteIt(id) { state.itinerary = state.itinerary.filter(i=>i.id!==id); saveAll(); render(); }
+
+// ===== 消費紀錄 =====
+function renderExpense() {
+  const cur = getCur();
+  const total = state.expenses.reduce((s,e)=>s+(e.amount||0),0);
+  const byCat = EXPENSE_CATS.map(cat=>({cat,total:state.expenses.filter(e=>e.category===cat).reduce((s,e)=>s+(e.amount||0),0)})).filter(c=>c.total>0);
+
+  let html = `
+    <div class="section-header"><h2 class="section-title">💰 消費紀錄</h2><button class="add-btn" onclick="showExpForm()">＋ 記一筆</button></div>
+    <div class="receipt-row">
+      <label class="receipt-label">
+        <span>📷 拍收據 / 上傳收據圖片</span>
+        <input type="file" accept="image/*" id="receiptInput" onchange="handleReceipt(this)">
+      </label>
+    </div>`;
+
+  // 掃描結果
+  if(state.scanPreview || state.scanItems.length > 0 || state.scanError) {
+    html += `<div class="scan-card"><h3 class="form-title">🧾 收據辨識結果</h3>`;
+    if(state.scanPreview) html += `<div class="scan-preview"><img src="${state.scanPreview}" alt="收據"></div>`;
+    if(state.scanError) html += `<div class="scan-error">⚠️ ${esc(state.scanError)}</div>`;
+    if(state.scanItems.length > 0) {
+      html += `<p class="scan-hint">👇 請對照收據填入消費資訊，可新增多筆：</p>`;
+      state.scanItems.forEach((item,i) => {
+        html += `<div class="scan-item"><div class="scan-item-row">
+          <input type="text" value="${esc(item.title)}" onchange="updateScanItem(${i},'title',this.value)" style="flex:1" placeholder="項目名稱">
+          <input type="number" value="${item.amount||''}" onchange="updateScanItem(${i},'amount',this.value)" style="width:90px" placeholder="金額">
+          <select onchange="updateScanItem(${i},'category',this.value)">${EXPENSE_CATS.map(c=>`<option ${item.category===c?'selected':''}>${c}</option>`).join('')}</select>
+          <button class="btn-x" onclick="removeScanItem(${i})">✕</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
+          <input type="date" value="${item.date||''}" onchange="updateScanItem(${i},'date',this.value)" style="font-size:13px;padding:6px 8px">
+        </div></div>`;
+      });
+      html += `<button class="btn-outline-sm" onclick="addScanItem()" style="margin-top:8px">＋ 再加一筆</button>`;
+      html += `<div class="scan-actions"><button class="save-btn" onclick="confirmScanItems()">✅ 儲存 (${state.scanItems.length} 筆)</button><button class="cancel-btn" onclick="cancelScan()">取消</button></div>`;
+    }
+    if(!state.scanning && state.scanItems.length===0 && !state.scanError) html += `<button class="cancel-btn" onclick="cancelScan()">關閉</button>`;
+    html += `</div>`;
+  }
+
+  html += `<div class="summary-card"><div class="total-row"><span class="total-label">消費總計</span><span class="total-amount">${cur.symbol} ${total.toLocaleString()}</span></div>
+    ${byCat.length?`<div class="cat-breakdown">${byCat.map(c=>`<div class="cat-row"><span>${c.cat}</span><span>${cur.symbol} ${c.total.toLocaleString()}</span></div>`).join('')}</div>`:''}
+  </div>`;
+
+  // 分攤
+  if(state.members.length > 0) {
+    const summary = {};
+    state.members.forEach(m => { summary[m.name] = {paid:0,owes:0}; });
+    state.expenses.forEach(e => {
+      if(e.payer && summary[e.payer]) summary[e.payer].paid += e.amount;
+      if(e.splitAmong?.length > 0) { const per = e.amount/e.splitAmong.length; e.splitAmong.forEach(n => { if(summary[n]) summary[n].owes += per; }); }
+    });
+    const hasData = Object.values(summary).some(d=>d.paid||d.owes);
+    if(hasData) {
+      html += `<div class="split-card"><h3 class="sub-title">📊 費用分攤</h3>${Object.entries(summary).map(([name,d])=>{
+        const diff = d.paid - d.owes;
+        return `<div class="split-row"><span class="split-name">${esc(name)}</span><span>已付 ${cur.symbol}${d.paid.toLocaleString()}</span><span>應付 ${cur.symbol}${d.owes.toLocaleString()}</span><span style="color:${diff>=0?'#16a34a':'#dc2626'};font-weight:600">${diff>=0?'多付':'少付'} ${cur.symbol}${Math.abs(diff).toLocaleString()}</span></div>`;
+      }).join('')}</div>`;
+    }
+  }
+
+  html += `<div id="expFormArea"></div>`;
+
+  // 明細
+  html += `<div class="expense-list">${[...state.expenses].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(e=>`<div class="expense-item"><div class="expense-left"><span class="expense-cat">${e.category}</span><span class="expense-title">${esc(e.title)}</span>${e.date?`<span class="expense-date">${e.date}</span>`:''}${e.payer?`<span class="expense-payer">付：${esc(e.payer)}</span>`:''}</div><div class="expense-right"><span class="expense-amount">${cur.symbol} ${(e.amount||0).toLocaleString()}</span><button class="btn-sm" onclick="deleteExp('${e.id}')">🗑️</button></div></div>`).join('')}</div>`;
+  return html;
+}
+
+// 收據處理 - 上傳圖片預覽 + 手動填寫
+async function handleReceipt(input) {
+  const file = input.files?.[0];
+  if(!file) return;
+  state.scanError = ''; state.scanItems = [];
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    state.scanPreview = ev.target.result;
+    // 預填一筆空白讓使用者手動輸入
+    state.scanItems = [{id:uid(), title:'', amount:0, category:'餐飲', date: new Date().toISOString().split('T')[0]}];
+    render();
+  };
+  reader.readAsDataURL(file);
+}
+function updateScanItem(i, field, val) { if(field==='amount') state.scanItems[i].amount = parseFloat(val)||0; else state.scanItems[i][field] = val; render(); }
+function removeScanItem(i) { state.scanItems.splice(i,1); render(); }
+function addScanItem() { state.scanItems.push({id:uid(), title:'', amount:0, category:'餐飲', date: new Date().toISOString().split('T')[0]}); render(); }
+function confirmScanItems() {
+  state.scanItems.forEach(item => { state.expenses.push({id:uid(),date:item.date,category:item.category,title:item.title,amount:item.amount,payer:'',splitAmong:[]}); });
+  state.scanItems = []; state.scanPreview = null; saveAll(); render();
+}
+function cancelScan() { state.scanItems = []; state.scanPreview = null; state.scanError = ''; render(); }
+
+function expFormHTML() {
+  const cur = getCur();
+  let html = `<div class="form-card"><h3 class="form-title">💳 新增消費</h3><div class="form-grid">
+    <div class="field-half"><label class="field-label">日期</label><input type="date" id="ef_date"></div>
+    <div class="field-half"><label class="field-label">類別</label><select id="ef_cat">${EXPENSE_CATS.map(c=>`<option>${c}</option>`).join('')}</select></div>
+    <div class="field-half"><label class="field-label">項目 *</label><input type="text" id="ef_title" placeholder="例：一蘭拉麵"></div>
+    <div class="field-half"><label class="field-label">金額 (${cur.symbol})</label><input type="number" id="ef_amount" placeholder="0"></div>`;
+  if(state.members.length > 0) {
+    html += `<div class="field-half"><label class="field-label">付款人</label><select id="ef_payer"><option value="">選擇...</option>${state.members.map(m=>`<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('')}</select></div>`;
+    html += `<div class="field-full"><label class="field-label">分攤對象</label><div class="split-check-group">${state.members.map(m=>`<label class="split-check-label"><input type="checkbox" class="split-cb" value="${esc(m.name)}"><span>${esc(m.name)}</span></label>`).join('')}<button class="btn-outline-sm" onclick="document.querySelectorAll('.split-cb').forEach(c=>c.checked=true)">全選</button></div></div>`;
+  }
+  html += `</div><div class="form-actions"><button class="save-btn" onclick="saveExp()">💾 儲存</button><button class="cancel-btn" onclick="render()">取消</button></div></div>`;
+  return html;
+}
+function showExpForm() { document.getElementById('expFormArea').innerHTML = expFormHTML(); }
+function saveExp() {
+  const title = document.getElementById('ef_title').value;
+  const amount = parseFloat(document.getElementById('ef_amount').value);
+  if(!title.trim() || !amount) return alert('請輸入項目和金額');
+  const splitCbs = document.querySelectorAll('.split-cb');
+  const splitAmong = []; splitCbs.forEach(cb => { if(cb.checked) splitAmong.push(cb.value); });
+  state.expenses.push({id:uid(),date:document.getElementById('ef_date').value,category:document.getElementById('ef_cat').value,title,amount,payer:document.getElementById('ef_payer')?.value||'',splitAmong});
+  saveAll(); render();
+}
+function deleteExp(id) { state.expenses = state.expenses.filter(e=>e.id!==id); saveAll(); render(); }
+
+// ===== 親友團 =====
+function renderMembers() {
+  let html = `<div class="section-header"><h2 class="section-title">👥 親友團 (${state.members.length} 人)</h2><button class="add-btn" onclick="showMemberForm()">＋ 新增成員</button></div><div id="memberFormArea"></div>`;
+  if(state.members.length === 0) {
+    html += `<div class="empty"><div class="empty-icon">👨‍👩‍👧‍👦</div><p class="empty-text">還沒有成員，快把親友加進來！</p></div>`;
+  } else {
+    html += `<div class="member-list">${state.members.map(m=>`<div class="member-card">
+      <div class="member-avatar">${esc(m.name?.charAt(0))}</div>
+      <div class="member-info"><span class="member-name">${esc(m.name)}</span>
+        ${m.phone?`<span class="member-detail">📱 ${esc(m.phone)}</span>`:''}
+        ${m.passport?`<span class="member-detail">🛂 ${esc(m.passport)}</span>`:''}
+        ${m.passportExp?`<span class="member-detail">📅 效期：${esc(m.passportExp)}</span>`:''}
+        ${m.dietary?`<span class="member-detail">🍽️ ${esc(m.dietary)}</span>`:''}
+        ${m.notes?`<span class="member-detail">📝 ${esc(m.notes)}</span>`:''}
+      </div>
+      <div class="member-actions"><button class="btn-sm" onclick="editMember('${m.id}')">✏️</button><button class="btn-sm" onclick="deleteMember('${m.id}')">🗑️</button></div>
+    </div>`).join('')}</div>`;
+  }
+  return html;
+}
+function memberFormHTML(data={},editId='') {
+  const d = {name:'',phone:'',passport:'',passportExp:'',dietary:'',notes:'',...data};
+  return `<div class="form-card"><h3 class="form-title">${editId?'✏️ 編輯成員':'👤 新增成員'}</h3>
+    <div class="form-grid">
+      <div class="field-half"><label class="field-label">姓名 *</label><input type="text" id="mf_name" value="${esc(d.name)}" placeholder="中文姓名"></div>
+      <div class="field-half"><label class="field-label">手機</label><input type="text" id="mf_phone" value="${esc(d.phone)}" placeholder="0912-345-678"></div>
+      <div class="field-half"><label class="field-label">護照號碼</label><input type="text" id="mf_passport" value="${esc(d.passport)}" placeholder="護照號碼"></div>
+      <div class="field-half"><label class="field-label">護照效期</label><input type="date" id="mf_passportExp" value="${d.passportExp}"></div>
+      <div class="field-half"><label class="field-label">飲食限制</label><input type="text" id="mf_dietary" value="${esc(d.dietary)}" placeholder="例：素食、不吃海鮮"></div>
+      <div class="field-half"><label class="field-label">備註</label><input type="text" id="mf_notes" value="${esc(d.notes)}" placeholder="特殊需求、緊急聯絡人..."></div>
+    </div>
+    <div class="form-actions"><button class="save-btn" onclick="saveMember('${editId}')">💾 儲存</button><button class="cancel-btn" onclick="render()">取消</button></div></div>`;
+}
+function showMemberForm() { document.getElementById('memberFormArea').innerHTML = memberFormHTML(); }
+function editMember(id) { const m = state.members.find(x=>x.id===id); if(m) document.getElementById('memberFormArea').innerHTML = memberFormHTML(m,id); }
+function saveMember(editId) {
+  const d = {name:document.getElementById('mf_name').value,phone:document.getElementById('mf_phone').value,passport:document.getElementById('mf_passport').value,passportExp:document.getElementById('mf_passportExp').value,dietary:document.getElementById('mf_dietary').value,notes:document.getElementById('mf_notes').value};
+  if(!d.name.trim()) return alert('請輸入姓名');
+  if(editId) { state.members = state.members.map(m=>m.id===editId?{...m,...d}:m); }
+  else { state.members.push({id:uid(),...d}); }
+  saveAll(); render();
+}
+function deleteMember(id) { if(!confirm('確定移除此成員？')) return; state.members = state.members.filter(m=>m.id!==id); saveAll(); render(); }
+
+function bindEvents() {}
+
+// 初始渲染
+render();
+</script>
+</body>
+</html>
