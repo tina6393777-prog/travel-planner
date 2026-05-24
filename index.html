@@ -196,7 +196,12 @@ const DEFAULT_CHECKLIST = [
 
 // ===== Google Sheets 設定 =====
 const SHEET_ID = '1U6TXAnCzci6X39Lg0xyNZVxPJN7k39FDuv-WoV_LUSA';
-const SHEET_NAMES = { trips: '旅行', members: '會員', itinerary: '行程', settings: '設定' };
+const SHEET_NAMES = {
+  flights: '航班資訊',
+  hotels: '飯店資訊',
+  members: '親友名單',
+  itinerary: '行程— 每日行程'
+};
 
 function sheetURL(sheetName) {
   return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
@@ -282,28 +287,39 @@ async function initApp() {
   document.getElementById('app').innerHTML = '<div class="loading"><div class="loading-icon">✈️</div><p style="color:var(--sub);margin-top:12px">載入行程資料中...</p></div>';
 
   // 同時讀取所有工作表
-  const [tripsData, membersData, itineraryData, settingsData] = await Promise.all([
-    fetchSheet(SHEET_NAMES.trips),
+  const [flightsData, hotelsData, membersData, itineraryData] = await Promise.all([
+    fetchSheet(SHEET_NAMES.flights),
+    fetchSheet(SHEET_NAMES.hotels),
     fetchSheet(SHEET_NAMES.members),
     fetchSheet(SHEET_NAMES.itinerary),
-    fetchSheet(SHEET_NAMES.settings),
   ]);
 
-  // 轉換旅程資料
-  if (tripsData && tripsData.length > 0) {
-    state.trips = tripsData.map((row, i) => ({
-      id: 'trip_' + i,
-      name: row['姓名'] || row['旅程名稱'] || '',
-      destination: row['目的地'] || '',
-      startDate: row['開始日期'] || '',
-      endDate: row['結束日期'] || '',
-      flight: row['航班'] || '',
-      flightReturn: row['返程航班'] || '',
-      hotel: row['飯店'] || '',
-      hotelLink: row['hotelLink'] || row['飯店連結'] || '',
-      trainInfo: row['訓練資訊'] || row['交通資訊'] || '',
-      notes: row['筆記'] || '',
-    }));
+  // 轉換航班 + 飯店 → 合併為旅程資料
+  if (flightsData && flightsData.length > 0) {
+    state.trips = flightsData.map((row, i) => {
+      // 對應的飯店資料（同一列）
+      const hotel = (hotelsData && hotelsData[i]) || {};
+      return {
+        id: 'trip_' + i,
+        destination: row['目的地'] || '',
+        name: row['目的地'] ? `${row['目的地']}旅行` : '旅程 ' + (i+1),
+        startDate: row['開始日期'] || '',
+        endDate: row['結束日期'] || '',
+        airline: row['航空公司'] || '',
+        departAirport: row['去程機場'] || '',
+        flight: row['去程航班'] || '',
+        flightTime: row['去程時間'] || '',
+        returnAirport: row['返程機場'] || '',
+        flightReturn: row['返程航班'] || '',
+        returnTime: row['返程時間'] || '',
+        notes: row['備註'] || '',
+        // 飯店資料
+        hotel: hotel['第一晚飯店'] || '',
+        hotelAddress: hotel['飯店地址'] || '',
+        hotelPhone: hotel['飯店電話'] || '',
+        hotelCost: hotel['費用'] || '',
+      };
+    });
     state.activeTripId = state.trips[0]?.id || null;
     sharedDataLoaded = true;
   }
@@ -314,10 +330,9 @@ async function initApp() {
       id: 'member_' + i,
       name: row['姓名'] || '',
       phone: row['電話'] || '',
-      passport: row['護照'] || '',
+      passport: row['護照編號'] || '',
       passportExp: row['護照效期'] || '',
-      dietary: row['飲食'] || '',
-      notes: row['筆記'] || '',
+      notes: row['備註'] || '',
     }));
   }
 
@@ -325,22 +340,14 @@ async function initApp() {
   if (itineraryData && itineraryData.length > 0) {
     state.itinerary = itineraryData.map((row, i) => ({
       id: 'it_' + i,
-      day: parseInt(row['天']) || 1,
-      time: row['時間'] || '',
-      title: row['標題'] || '',
+      date: row['日期'] || '',
+      title: row['行程'] || '',
       type: row['類型'] || '景點',
       address: row['地址'] || '',
-      notes: row['筆記'] || '',
+      notes: row['備註'] || '',
+      needBooking: row['是否需預約'] || '',
+      cost: row['費用'] || '',
     }));
-  }
-
-  // 轉換設定
-  if (settingsData) {
-    settingsData.forEach(row => {
-      const key = row['key / 貨幣'] || row['key'];
-      const val = row['value'];
-      if (key === 'currency' && val) state.currency = val;
-    });
   }
 
   if (sharedDataLoaded) console.log('✅ 已從 Google Sheets 載入行程資料');
@@ -419,18 +426,24 @@ function renderTrips() {
     </div>
     <div id="tripFormArea"></div>`;
   if (state.trips.length === 0) {
-    html += `<div class="empty"><div class="empty-icon">🌏</div><p class="empty-text">還沒有旅程，點上方「新增旅程」開始規劃！</p></div>`;
+    html += `<div class="empty"><div class="empty-icon">🌏</div><p class="empty-text">還沒有旅程資料，請到 Google Sheets 新增！</p></div>`;
   } else {
     html += `<div class="trip-list">${state.trips.map(t => {
       const isActive = t.id === state.activeTripId;
+      const flightInfo = [t.airline, t.flight, t.flightTime].filter(Boolean).join(' ');
+      const flightFrom = t.departAirport ? `(${t.departAirport})` : '';
+      const returnInfo = [t.airline, t.flightReturn, t.returnTime].filter(Boolean).join(' ');
+      const returnFrom = t.returnAirport ? `(${t.returnAirport})` : '';
       return `<div class="trip-card ${isActive?'active':''}">
-        <div class="trip-card-header"><div><div class="trip-name">${esc(t.name)}</div><div class="trip-dest">${esc(t.destination||'未設定目的地')}</div></div>
+        <div class="trip-card-header"><div><div class="trip-name">${esc(t.name)}</div><div class="trip-dest">📍 ${esc(t.destination||'未設定目的地')}</div></div>
         ${isActive?'<span class="active-badge">目前旅程</span>':''}</div>
         ${t.startDate||t.endDate?`<p class="trip-date">📅 ${esc(t.startDate||'?')} ～ ${esc(t.endDate||'?')}</p>`:''}
-        ${t.flight?`<p class="trip-info">✈️ 去程：${esc(t.flight)}</p>`:''}
-        ${t.flightReturn?`<p class="trip-info">✈️ 回程：${esc(t.flightReturn)}</p>`:''}
-        ${t.hotel?`<p class="trip-info">🏨 ${esc(t.hotel)}${t.hotelLink?` <a href="${esc(t.hotelLink)}" target="_blank" class="hotel-link">查看 ↗</a>`:''}</p>`:''}
-        ${t.trainInfo?`<p class="trip-info">🚃 ${esc(t.trainInfo)}</p>`:''}
+        ${flightInfo?`<p class="trip-info">✈️ 去程：${esc(flightInfo)} ${esc(flightFrom)}</p>`:''}
+        ${returnInfo?`<p class="trip-info">✈️ 回程：${esc(returnInfo)} ${esc(returnFrom)}</p>`:''}
+        ${t.hotel?`<p class="trip-info">🏨 ${esc(t.hotel)}</p>`:''}
+        ${t.hotelAddress?`<p class="trip-info" style="padding-left:24px">📍 ${esc(t.hotelAddress)} ${t.hotelAddress?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.hotelAddress)}" target="_blank" class="hotel-link">地圖 ↗</a>`:''}</p>`:''}
+        ${t.hotelPhone?`<p class="trip-info" style="padding-left:24px">📞 <a href="tel:${esc(t.hotelPhone)}" style="color:var(--pri);text-decoration:none">${esc(t.hotelPhone)}</a></p>`:''}
+        ${t.hotelCost?`<p class="trip-info" style="padding-left:24px">💰 ${esc(t.hotelCost)}</p>`:''}
         ${t.notes?`<p class="trip-notes">📝 ${esc(t.notes)}</p>`:''}
         <div class="trip-actions">
           <button class="${isActive?'btn-outline-sm':'btn-outline'}" onclick="${isActive?'':'setState({activeTripId:\''+t.id+'\'})'}" ${isActive?'disabled':''}>${isActive?'✓ 已選擇':'選為目前旅程'}</button>
@@ -498,17 +511,20 @@ function renderOnTrip() {
   const trip = getActiveTrip();
   let html = `<div class="section-header"><h2 class="section-title">🗺️ 行程中</h2><button class="btn-outline-sm" onclick="initApp()">🔄 重新載入</button></div>`;
   if(state.itinerary.length === 0) {
-    html += `<div class="empty"><div class="empty-icon">🗺️</div><p class="empty-text">還沒有行程，快來新增景點和餐廳！</p></div>`;
+    html += `<div class="empty"><div class="empty-icon">🗺️</div><p class="empty-text">還沒有行程資料，請到 Google Sheets 新增！</p></div>`;
   } else {
-    const days = [...new Set(state.itinerary.map(i=>i.day))].sort((a,b)=>a-b);
-    days.forEach(day => {
-      const items = state.itinerary.filter(i=>i.day===day).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-      html += `<div class="day-section"><h3 class="day-title">📅 第 ${day} 天</h3>`;
+    // 用日期分組
+    const dates = [...new Set(state.itinerary.map(i=>i.date))].sort();
+    dates.forEach(date => {
+      const items = state.itinerary.filter(i=>i.date===date);
+      html += `<div class="day-section"><h3 class="day-title">📅 ${date || '未設定日期'}</h3>`;
       items.forEach((item,idx) => {
         const q = encodeURIComponent(item.address||item.title);
-        html += `<div class="it-card"><div class="it-header"><span class="it-icon">${TYPE_ICONS[item.type]||'📌'}</span><div class="it-info"><span class="it-time">${esc(item.time||'--:--')}</span><span class="it-title">${esc(item.title)}</span></div><span class="type-tag">${item.type}</span></div>
+        html += `<div class="it-card"><div class="it-header"><span class="it-icon">${TYPE_ICONS[item.type]||'📌'}</span><div class="it-info"><span class="it-title">${esc(item.title)}</span></div><span class="type-tag">${item.type}</span></div>
         ${item.address?`<p class="it-addr">📍 ${esc(item.address)}</p>`:''}
         ${item.notes?`<p class="it-notes">📝 ${esc(item.notes)}</p>`:''}
+        ${item.needBooking?`<p class="it-notes">🔖 需預約：${esc(item.needBooking)}</p>`:''}
+        ${item.cost?`<p class="it-notes">💰 費用：${esc(item.cost)}</p>`:''}
         <div class="it-actions"><a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" class="map-btn">🗺️ 地圖</a>
         ${idx>0?`<a href="https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(items[idx-1].address||items[idx-1].title)}&destination=${encodeURIComponent(item.address||item.title)}&travelmode=transit" target="_blank" class="nav-btn">🚶 前往路線</a>`:''}
         </div></div>`;
@@ -674,7 +690,6 @@ function renderMembers() {
         ${m.phone?`<span class="member-detail">📱 ${esc(m.phone)}</span>`:''}
         ${m.passport?`<span class="member-detail">🛂 ${esc(m.passport)}</span>`:''}
         ${m.passportExp?`<span class="member-detail">📅 效期：${esc(m.passportExp)}</span>`:''}
-        ${m.dietary?`<span class="member-detail">🍽️ ${esc(m.dietary)}</span>`:''}
         ${m.notes?`<span class="member-detail">📝 ${esc(m.notes)}</span>`:''}
       </div>
       <div class="member-actions"></div>
