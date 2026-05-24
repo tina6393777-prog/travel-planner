@@ -194,16 +194,74 @@ const DEFAULT_CHECKLIST = [
   {id:"t5",text:"拖鞋",checked:false,category:"日用品"},
 ];
 
+// ===== Google Sheets 設定 =====
+const SHEET_ID = '1U6TXAnCzci6X39Lg0xyNZVxPJN7k39FDuv-WoV_LUSA';
+const SHEET_NAMES = { trips: '旅行', members: '會員', itinerary: '行程', settings: '設定' };
+
+function sheetURL(sheetName) {
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
+}
+
+// CSV 解析（支援含逗號和換行的欄位）
+function parseCSV(text) {
+  const rows = []; let row = []; let cell = ''; let inQuote = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuote) {
+      if (c === '"' && text[i+1] === '"') { cell += '"'; i++; }
+      else if (c === '"') { inQuote = false; }
+      else { cell += c; }
+    } else {
+      if (c === '"') { inQuote = true; }
+      else if (c === ',') { row.push(cell.trim()); cell = ''; }
+      else if (c === '\n' || (c === '\r' && text[i+1] === '\n')) {
+        row.push(cell.trim()); cell = '';
+        if (c === '\r') i++;
+        if (row.some(v => v)) rows.push(row);
+        row = [];
+      } else { cell += c; }
+    }
+  }
+  row.push(cell.trim());
+  if (row.some(v => v)) rows.push(row);
+  return rows;
+}
+
+function csvToObjects(text) {
+  const rows = parseCSV(text);
+  if (rows.length < 2) return [];
+  const headers = rows[0];
+  return rows.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = row[i] || ''; });
+    return obj;
+  });
+}
+
+async function fetchSheet(sheetName) {
+  try {
+    const resp = await fetch(sheetURL(sheetName));
+    if (!resp.ok) throw new Error('Fetch failed');
+    const text = await resp.text();
+    return csvToObjects(text);
+  } catch(e) {
+    console.error(`讀取 ${sheetName} 失敗:`, e);
+    return null;
+  }
+}
+
 // ===== 狀態 =====
+let sharedDataLoaded = false;
+
 let state = {
   tab: "trips",
-  trips: load("trips") || [],
-  activeTripId: load("activeTripId") || null,
-  members: load("members") || [],
+  trips: [],
+  activeTripId: null,
+  members: [],
   checklist: load("checklist") || DEFAULT_CHECKLIST,
   expenses: load("expenses") || [],
-  itinerary: load("itinerary") || [],
-  currency: load("currency") || "JPY",
+  itinerary: [],
+  currency: "JPY",
   prepFilter: "all",
   // scan state
   scanning: false,
@@ -213,13 +271,82 @@ let state = {
 };
 
 function saveAll() {
-  save("trips", state.trips);
-  save("activeTripId", state.activeTripId);
-  save("members", state.members);
+  // 只存個人資料到 localStorage（checklist 和消費紀錄）
   save("checklist", state.checklist);
   save("expenses", state.expenses);
-  save("itinerary", state.itinerary);
-  save("currency", state.currency);
+}
+
+// 從 Google Sheets 載入共用資料
+async function initApp() {
+  // 顯示載入中
+  document.getElementById('app').innerHTML = '<div class="loading"><div class="loading-icon">✈️</div><p style="color:var(--sub);margin-top:12px">載入行程資料中...</p></div>';
+
+  // 同時讀取所有工作表
+  const [tripsData, membersData, itineraryData, settingsData] = await Promise.all([
+    fetchSheet(SHEET_NAMES.trips),
+    fetchSheet(SHEET_NAMES.members),
+    fetchSheet(SHEET_NAMES.itinerary),
+    fetchSheet(SHEET_NAMES.settings),
+  ]);
+
+  // 轉換旅程資料
+  if (tripsData && tripsData.length > 0) {
+    state.trips = tripsData.map((row, i) => ({
+      id: 'trip_' + i,
+      name: row['姓名'] || row['旅程名稱'] || '',
+      destination: row['目的地'] || '',
+      startDate: row['開始日期'] || '',
+      endDate: row['結束日期'] || '',
+      flight: row['航班'] || '',
+      flightReturn: row['返程航班'] || '',
+      hotel: row['飯店'] || '',
+      hotelLink: row['hotelLink'] || row['飯店連結'] || '',
+      trainInfo: row['訓練資訊'] || row['交通資訊'] || '',
+      notes: row['筆記'] || '',
+    }));
+    state.activeTripId = state.trips[0]?.id || null;
+    sharedDataLoaded = true;
+  }
+
+  // 轉換成員資料
+  if (membersData && membersData.length > 0) {
+    state.members = membersData.map((row, i) => ({
+      id: 'member_' + i,
+      name: row['姓名'] || '',
+      phone: row['電話'] || '',
+      passport: row['護照'] || '',
+      passportExp: row['護照效期'] || '',
+      dietary: row['飲食'] || '',
+      notes: row['筆記'] || '',
+    }));
+  }
+
+  // 轉換行程資料
+  if (itineraryData && itineraryData.length > 0) {
+    state.itinerary = itineraryData.map((row, i) => ({
+      id: 'it_' + i,
+      day: parseInt(row['天']) || 1,
+      time: row['時間'] || '',
+      title: row['標題'] || '',
+      type: row['類型'] || '景點',
+      address: row['地址'] || '',
+      notes: row['筆記'] || '',
+    }));
+  }
+
+  // 轉換設定
+  if (settingsData) {
+    settingsData.forEach(row => {
+      const key = row['key / 貨幣'] || row['key'];
+      const val = row['value'];
+      if (key === 'currency' && val) state.currency = val;
+    });
+  }
+
+  if (sharedDataLoaded) console.log('✅ 已從 Google Sheets 載入行程資料');
+  else console.log('ℹ️ Google Sheets 無資料，請先在 Sheets 中新增');
+
+  render();
 }
 
 function setState(patch) {
@@ -237,11 +364,15 @@ function esc(s) { const d = document.createElement('div'); d.textContent = s||''
 function render() {
   const app = document.getElementById('app');
   const trip = getActiveTrip();
+  const sheetsURL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit`;
   app.innerHTML = `
     <header>
       <div class="header-inner">
         <span class="logo">✈️ 家庭旅遊規劃</span>
-        ${trip ? `<span class="trip-badge">${esc(trip.name)}</span>` : ''}
+        <div style="display:flex;align-items:center;gap:8px">
+          ${trip ? `<span class="trip-badge">${esc(trip.name)}</span>` : ''}
+          <a href="${sheetsURL}" target="_blank" style="background:rgba(255,255,255,.2);color:#fff;text-decoration:none;padding:4px 10px;border-radius:12px;font-size:11px">📝 編輯</a>
+        </div>
       </div>
     </header>
     <main>${renderTab()}</main>
@@ -269,7 +400,7 @@ function renderTrips() {
   let html = `
     <div class="section-header">
       <h2 class="section-title">🗓️ 旅程管理</h2>
-      <button class="add-btn" onclick="showTripForm()">＋ 新增旅程</button>
+      <button class="btn-outline-sm" onclick="initApp()">🔄 重新載入</button>
     </div>
     <div class="currency-row">
       <span class="currency-label">旅遊幣別：</span>
@@ -303,8 +434,6 @@ function renderTrips() {
         ${t.notes?`<p class="trip-notes">📝 ${esc(t.notes)}</p>`:''}
         <div class="trip-actions">
           <button class="${isActive?'btn-outline-sm':'btn-outline'}" onclick="${isActive?'':'setState({activeTripId:\''+t.id+'\'})'}" ${isActive?'disabled':''}>${isActive?'✓ 已選擇':'選為目前旅程'}</button>
-          <button class="btn-edit" onclick="editTrip('${t.id}')">編輯</button>
-          <button class="btn-del" onclick="deleteTrip('${t.id}')">刪除</button>
         </div>
       </div>`;
     }).join('')}</div>`;
@@ -367,7 +496,7 @@ function resetChecklist() { state.checklist = state.checklist.map(c=>({...c,chec
 // ===== 行程中 =====
 function renderOnTrip() {
   const trip = getActiveTrip();
-  let html = `<div class="section-header"><h2 class="section-title">🗺️ 行程中</h2><button class="add-btn" onclick="showItForm()">＋ 新增行程點</button></div><div id="itFormArea"></div>`;
+  let html = `<div class="section-header"><h2 class="section-title">🗺️ 行程中</h2><button class="btn-outline-sm" onclick="initApp()">🔄 重新載入</button></div>`;
   if(state.itinerary.length === 0) {
     html += `<div class="empty"><div class="empty-icon">🗺️</div><p class="empty-text">還沒有行程，快來新增景點和餐廳！</p></div>`;
   } else {
@@ -382,7 +511,7 @@ function renderOnTrip() {
         ${item.notes?`<p class="it-notes">📝 ${esc(item.notes)}</p>`:''}
         <div class="it-actions"><a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" class="map-btn">🗺️ 地圖</a>
         ${idx>0?`<a href="https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(items[idx-1].address||items[idx-1].title)}&destination=${encodeURIComponent(item.address||item.title)}&travelmode=transit" target="_blank" class="nav-btn">🚶 前往路線</a>`:''}
-        <button class="btn-sm" onclick="editIt('${item.id}')">✏️</button><button class="btn-sm" onclick="deleteIt('${item.id}')">🗑️</button></div></div>`;
+        </div></div>`;
       });
       html += `</div>`;
     });
@@ -535,7 +664,7 @@ function deleteExp(id) { state.expenses = state.expenses.filter(e=>e.id!==id); s
 
 // ===== 親友團 =====
 function renderMembers() {
-  let html = `<div class="section-header"><h2 class="section-title">👥 親友團 (${state.members.length} 人)</h2><button class="add-btn" onclick="showMemberForm()">＋ 新增成員</button></div><div id="memberFormArea"></div>`;
+  let html = `<div class="section-header"><h2 class="section-title">👥 親友團 (${state.members.length} 人)</h2><button class="btn-outline-sm" onclick="initApp()">🔄 重新載入</button></div>`;
   if(state.members.length === 0) {
     html += `<div class="empty"><div class="empty-icon">👨‍👩‍👧‍👦</div><p class="empty-text">還沒有成員，快把親友加進來！</p></div>`;
   } else {
@@ -548,7 +677,7 @@ function renderMembers() {
         ${m.dietary?`<span class="member-detail">🍽️ ${esc(m.dietary)}</span>`:''}
         ${m.notes?`<span class="member-detail">📝 ${esc(m.notes)}</span>`:''}
       </div>
-      <div class="member-actions"><button class="btn-sm" onclick="editMember('${m.id}')">✏️</button><button class="btn-sm" onclick="deleteMember('${m.id}')">🗑️</button></div>
+      <div class="member-actions"></div>
     </div>`).join('')}</div>`;
   }
   return html;
@@ -579,8 +708,8 @@ function deleteMember(id) { if(!confirm('確定移除此成員？')) return; sta
 
 function bindEvents() {}
 
-// 初始渲染
-render();
+// 啟動
+initApp();
 </script>
 </body>
 </html>
